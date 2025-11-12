@@ -6,17 +6,13 @@
 const char *ssid = "S23João";
 const char *password = "12345678";
 
-// configuração pinos
-const int MQ2_ANALOG_PIN = 32; // <--- MUDANÇA (Nome da variável)
+// configuração dos pinos
+const int MQ2_ANALOG_PIN = 32; 
 const int LED_VERDE_PIN = 25;
 const int LED_VERMELHO_PIN = 26;
 const int BUZZER_PIN = 33;
 
-// !!! IMPORTANTE: CALIBRAÇÃO NECESSÁRIA !!!
-// O valor 4050 era para o MQ-5. Você DEVE ajustar este valor
-// para o seu novo sensor MQ-2.
-// Veja as instruções de calibração abaixo do código.
-const int LIMIAR_GAS = 1500; // <--- AJUSTE ESTE VALOR (ex: 1500)
+const int LIMIAR_GAS = 1500; // valor limite para detectar perigo
 
 // estado do sensor
 String sensorStatus = "seguro";
@@ -24,23 +20,29 @@ int valorSensor = 0;
 
 AsyncWebServer server(80);
 
-// pg html
+// página html que será exibida
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
   <title>ESP32 - Detector de Gás (MQ-2)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
+    /* estilo geral da página */
     html { font-family: Arial, Helvetica, sans-serif; text-align: center; }
     body { background-color: #222; color: #fff; margin-top: 50px; }
     h1 { font-size: 2.5rem; }
     p { font-size: 1.2rem; }
+
+    /* contêiner principal */
     .container {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 30px;
     }
+
+    /* cartão que mostra o status do sensor */
     .status-card {
       background-color: #333;
       border-radius: 20px;
@@ -50,24 +52,31 @@ const char index_html[] PROGMEM = R"rawliteral(
       box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
       transition: background-color 0.5s ease;
     }
+
+    /* texto do status (seguro ou perigo) */
     .status-text {
       font-size: 3rem;
       font-weight: bold;
       margin: 20px 0;
       transition: color 0.5s ease;
     }
+
+    /* cor verde quando o ambiente está seguro */
     .seguro { background-color: #28a745; }
     .seguro .status-text { color: #fff; }
 
+    /* cor vermelha e animação quando há perigo */
     .perigo { background-color: #dc3545; animation: pulse 1s infinite; }
     .perigo .status-text { color: #fff; }
 
+    /* animação de pulsar no modo perigo */
     @keyframes pulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.05); }
       100% { transform: scale(1); }
     }
 
+    /* área onde aparece o gráfico */
     .chart-container {
       background-color: #333;
       border-radius: 20px;
@@ -76,20 +85,21 @@ const char index_html[] PROGMEM = R"rawliteral(
       max-width: 800px;
       box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
     }
-    
-    /* 2. ADIÇÃO: Estilos para o gráfico SVG */
+
+    /* configurações do gráfico SVG */
     #meuGraficoSvg {
       width: 100%;
-      height: 200px; /* Altura fixa para o gráfico */
+      height: 200px;
       background-color: #2a2a2a;
       border-radius: 10px;
     }
     #graficoLinha {
       stroke-width: 3px;
       fill: none;
-      transition: stroke 0.5s ease; /* Transição da cor da linha */
+      transition: stroke 0.5s ease; 
     }
 
+    /* tabela de histórico (log) */
     .log-container {
       background-color: #333;
       border-radius: 20px;
@@ -120,72 +130,73 @@ const char index_html[] PROGMEM = R"rawliteral(
 <body>
   <h1>gasSensor (MQ-2)</h1>
 
-    <div class="container">
+  <div class="container">
     
+    <!-- cartão que mostra o status atual -->
     <div id="statusCard" class="status-card">
-        <p>Status Atual:</p>
-        <div id="statusText" class="status-text">CARREGANDO...</div>
-        <p>Valor do Sensor: <span id="sensorValue">--</span></p>
+        <p>Status atual:</p>
+        <div id="statusText" class="status-text">carregando...</div>
+        <p>Valor do sensor: <span id="sensorValue">--</span></p>
     </div>
 
+    <!-- área do gráfico em tempo real -->
     <div class="chart-container">
         <h2>Oscilacao do Sensor</h2>
         <svg id="meuGraficoSvg" viewBox="0 0 500 200" preserveAspectRatio="none">
-        <polyline id="graficoLinha" points="0,100" />
+          <polyline id="graficoLinha" points="0,100" />
         </svg>
     </div>
 
+    <!-- tabela que mostra o histórico de mudanças de status -->
     <div class="log-container">
-        <h2>Log de Alteracoes de Status</h2>
+        <h2>Log de alteracoes de status</h2>
         <table>
-        <thead>
+          <thead>
             <tr>
-            <th>Horário</th>
-            <th>Status</th>
-            <th>Valor</th>
+              <th>Horario</th>
+              <th>Status</th>
+              <th>Valor</th>
             </tr>
-        </thead>
-        <tbody id="logTableBody">
-        </tbody>
+          </thead>
+          <tbody id="logTableBody">
+          </tbody>
         </table>
     </div>
 
-    </div>
+  </div>
 
 <script>
-  // --- SEÇÃO DE NOTIFICAÇÃO (original) ---
-    document.addEventListener('DOMContentLoaded', () => {
+  // pede permissão para enviar notificações no navegador
+  document.addEventListener('DOMContentLoaded', () => {
     if (Notification.permission !== "granted") {
         Notification.requestPermission();
     }
-    });
+  });
 
-    function showNotification() {
+  // mostra uma notificação se houver perigo
+  function showNotification() {
     if (Notification.permission === "granted") {
-        new Notification("ALERTA DE SEGURANÇA!", {
+        new Notification("Alerta de segurança!", {
         body: "Possível vazamento de gás detectado!",
         icon: "https://img.icons8.com/plasticine/100/gas-mask.png"
         });
-        }
     }
+  }
 
-    let alertShown = false;
+  let alertShown = false; // evita repetir alerta
+  let estadoAnterior = "";
+  const MAX_ENTRADAS_LOG = 10; // máximo de registros na tabela
 
-  // --- 4. MUDANÇA: Lógica do Gráfico (sem Chart.js) ---
+  // configurações do gráfico
+  const MAX_PONTOS_GRAFICO_SVG = 50;
+  const SVG_VIEW_WIDTH = 500;
+  const SVG_VIEW_HEIGHT = 200;
+  const MAX_VALOR_SENSOR = 4095;
 
-    let estadoAnterior = "";
-    const MAX_ENTRADAS_LOG = 10;
+  let historicoValores = []; // guarda valores anteriores
 
-  // Constantes para o gráfico SVG
-  const MAX_PONTOS_GRAFICO_SVG = 50; // Quantos pontos na tela
-  const SVG_VIEW_WIDTH = 500;  // Deve ser igual ao 'viewBox' do SVG
-  const SVG_VIEW_HEIGHT = 200; // Deve ser igual ao 'viewBox' do SVG
-  const MAX_VALOR_SENSOR = 4095; // Valor máximo do ADC do ESP32
-
-  let historicoValores = []; // Array para guardar os valores
-
-  // Função para adicionar uma entrada na tabela de log (original)
-    function adicionarAoLog(status, valor) {
+  // adiciona uma nova linha no log
+  function adicionarAoLog(status, valor) {
     const tabelaBody = document.getElementById("logTableBody");
     const data = new Date();
     const horario = data.toLocaleTimeString(); 
@@ -196,105 +207,86 @@ const char index_html[] PROGMEM = R"rawliteral(
     if(tabelaBody.rows.length > MAX_ENTRADAS_LOG) {
         tabelaBody.deleteRow(MAX_ENTRADAS_LOG);
     }
-    }
+  }
 
-  // Função para ATUALIZAR o gráfico SVG
-    function atualizarGraficoSvg(valor) {
-    // Adiciona o novo valor ao histórico
+  // atualiza o gráfico SVG com o novo valor
+  function atualizarGraficoSvg(valor) {
     historicoValores.push(valor);
-
-    // Limita o número de pontos no histórico
     if(historicoValores.length > MAX_PONTOS_GRAFICO_SVG) {
-      historicoValores.shift(); // Remove o valor mais antigo
+      historicoValores.shift(); 
     }
 
     const linhaGrafico = document.getElementById("graficoLinha");
-    let pontosString = ""; // String "x1,y1 x2,y2 ..."
+    let pontosString = "";
 
     for(let i = 0; i < historicoValores.length; i++) {
-      // Calcula a posição X (distribuída igualmente)
       const x = (i / (MAX_PONTOS_GRAFICO_SVG - 1)) * SVG_VIEW_WIDTH;
-    
-      // Calcula a posição Y (mapeia 0-4095 para 0-200)
-      // O '0' do SVG é no topo, por isso invertemos (HEIGHT - valor)
       const y = SVG_VIEW_HEIGHT - (historicoValores[i] / MAX_VALOR_SENSOR) * SVG_VIEW_HEIGHT;
-
-      // Garante que o valor Y não saia da tela
-        const y_clamp = Math.max(0, Math.min(SVG_VIEW_HEIGHT, y));
-
-        pontosString += `${x},${y_clamp} `;
+      const y_clamp = Math.max(0, Math.min(SVG_VIEW_HEIGHT, y));
+      pontosString += `${x},${y_clamp} `;
     }
-
-    // Define os pontos da linha
     linhaGrafico.setAttribute("points", pontosString.trim());
-    }
+  }
 
-  // --- SEÇÃO DE ATUALIZAÇÃO (AJAX) ---
-    setInterval(function () {
+  // busca os dados do ESP32 a cada 2 segundos
+  setInterval(function () {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-        
+      if (this.readyState == 4 && this.status == 200) {
         let response = JSON.parse(this.responseText);
         let status = response.status;
         let valor = response.valor;
 
         let statusCard = document.getElementById("statusCard");
         let statusText = document.getElementById("statusText");
-        let linhaGrafico = document.getElementById("graficoLinha"); // Pega a linha do SVG
+        let linhaGrafico = document.getElementById("graficoLinha");
         document.getElementById("sensorValue").innerHTML = valor;
         
+        // muda as cores e o texto conforme o status
         if(status === "seguro"){
             statusCard.className = "status-card seguro";
-            statusText.innerHTML = "SEGURO";
+            statusText.innerHTML = "seguro";
             alertShown = false; 
-          // 5. MUDANÇA: Muda a cor da linha SVG
-          linhaGrafico.style.stroke = "#28a745"; // Verde
+            linhaGrafico.style.stroke = "#28a745"; // verde
         } else if (status === "perigo"){
             statusCard.className = "status-card perigo";
-            statusText.innerHTML = "PERIGO!";
+            statusText.innerHTML = "perigo!";
             if(!alertShown){
-            showNotification();
-            alertShown = true; 
+              showNotification();
+              alertShown = true; 
             }
-          // 5. MUDANÇA: Muda a cor da linha SVG
-          linhaGrafico.style.stroke = "#dc3545"; // Vermelho
+            linhaGrafico.style.stroke = "#dc3545"; // vermelho
         }
 
-        // 6. MUDANÇA: Chama a nova função do gráfico
+        // atualiza gráfico e log se o estado mudou
         atualizarGraficoSvg(valor);
-
-        // --- Lógica do Log (original) ---
         if (status !== estadoAnterior && estadoAnterior !== "") {
             adicionarAoLog(status, valor);
         }
         estadoAnterior = status; 
-
-        }
+      }
     };
     xhttp.open("GET", "/status", true);
     xhttp.send();
-    }, 2000 ) ;
+  }, 2000);
 </script>
 </body>
 </html>
 )rawliteral";
 
 // setup
-void setup()
-{
+void setup() {
     Serial.begin(115200);
 
-    // pinos de saida
+    // define os pinos de saída
     pinMode(LED_VERDE_PIN, OUTPUT);
     pinMode(LED_VERMELHO_PIN, OUTPUT);
     pinMode(BUZZER_PIN, OUTPUT);
 
-    // conecta no wifi
+    // conecta ao wifi
     WiFi.begin(ssid, password);
     Serial.print("Conectando ao Wi-Fi...");
-    while (WiFi.status() != WL_CONNECTED)
-    {
+    while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
@@ -302,47 +294,40 @@ void setup()
     Serial.print("Endereço IP: ");
     Serial.println(WiFi.localIP());
 
-    // configuração das rotas
+    // rota principal envia a página web
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send_P(200, "text/html", index_html);
+    });
 
-    // envia a pg web para o servidor
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "text/html", index_html); });
+    // rota que envia o status do sensor em formato json
+    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{\"status\":\"" + sensorStatus + "\", \"valor\":" + String(valorSensor) + "}";
+        request->send(200, "application/json", json);
+    });
 
-    // envia o status atual do sensor em formato json
-    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    String json = "{\"status\":\"" + sensorStatus + "\", \"valor\":" + String(valorSensor) + "}";
-    request->send(200, "application/json", json); });
-
-    // inicia o servidor
+    // inicia o servidor web
     server.begin();
     Serial.println("Servidor web iniciado!");
 }
 
-void loop()
-{
+void loop() {
+    valorSensor = analogRead(MQ2_ANALOG_PIN); 
 
-    valorSensor = analogRead(MQ2_ANALOG_PIN); // <--- MUDANÇA (Nome da variável)
-
-    // Imprime o valor no Monitor Serial para ajudar na calibração
     Serial.print("Valor do Sensor MQ-2: ");
-    Serial.println(valorSensor); // <--- ADIÇÃO
+    Serial.println(valorSensor); 
 
-    if (valorSensor > LIMIAR_GAS)
-    {
-        // estado de perigo
+    // verifica se há perigo
+    if (valorSensor > LIMIAR_GAS) {
         sensorStatus = "perigo";
         digitalWrite(LED_VERMELHO_PIN, HIGH);
         digitalWrite(LED_VERDE_PIN, LOW);
         tone(BUZZER_PIN, 1500, 200);
-    }
-    else
-    {
-        // estado seguro
+    } else {
         sensorStatus = "seguro";
         digitalWrite(LED_VERMELHO_PIN, LOW);
         digitalWrite(LED_VERDE_PIN, HIGH);
         noTone(BUZZER_PIN);
     }
-    delay(200); // delay
+
+    delay(200); // pequena pausa antes da próxima leitura
 }
