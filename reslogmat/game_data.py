@@ -1,8 +1,9 @@
 # Arquivo: game_data.py
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Set, Optional
+from settings import CULPADO_FIXO_NOME  # Importa o nome do culpado
 
-# --- Definição da Estrutura da Cena ---
+# --- Definição da Estrutura da Cena (ATUALIZADA) ---
 @dataclass
 class Cena:
     titulo: str
@@ -13,373 +14,494 @@ class Cena:
     local: Optional[str] = None
     auto_avanca: bool = False  # avanca automaticamente apos tempo
     tempo_auto: float = 0  # segundos
+    visita_local_ato1: Optional[str] = None # <-- ADICIONADO: Para marcar local como visitado
 
 # --- Dados dos Personagens ---
 PERSONAGENS_BASE = [
-    {"nome": "Matheuz Holloway", "fantasia": "Art, o Palhaco", "papel": "suspeito", "desc": "1,90m, ombros largos, cicatrizes na mao"},
-    {"nome": "Lucas", "fantasia": "Sherlock Holmes", "papel": "vitima", "desc": "1,78m, observador e curioso"},
-    {"nome": "Rafaela", "fantasia": "Carrie", "papel": "assassina", "desc": "1,65m, silenciosa e imprevisivel"},
-    {"nome": "Julia", "fantasia": "Ghost Face", "papel": "suspeita", "desc": "1,70m, emotiva, cabelos ruivos"},
-    {"nome": "Camila", "fantasia": "A Freira", "papel": "suspeita", "desc": "1,68m, fria e julgadora"},
-    {"nome": "Thiago", "fantasia": "Jigsaw", "papel": "suspeito", "desc": "1,82m, metodico, fascinado por enigmas"},
-    {"nome": "Henrique", "fantasia": "Jason", "papel": "suspeito", "desc": "Grande, age por impulso"},
-    {"nome": "Bruno", "fantasia": "Freddy Krueger", "papel": "suspeito", "desc": "Estatura media, alcoolizado"},
-    {"nome": "Iris", "fantasia": "Samara", "papel": "suspeita", "desc": "Baixa, supersticiosa"},
-    {"nome": "Pedro", "fantasia": "Michael Myers", "papel": "suspeito", "desc": "Silencioso, expressao sombria"},
-    {"nome": "Clara", "fantasia": "-", "papel": "testemunha", "desc": "Amiga proxima de Lucas"},
+    {"nome": "Matheuz Holloway", "fantasia": "Art, o Palhaco", "papel": "suspeito", "desc": "Anfitrião carismático"},
+    {"nome": "Lucas", "fantasia": "Sherlock Holmes", "papel": "vitima", "desc": "A vítima"},
+    {"nome": "Rafaela", "fantasia": "Carrie", "papel": "assassina", "desc": "Silenciosa e observadora"},
+    {"nome": "Julia", "fantasia": "Ghost Face", "papel": "suspeita", "desc": "Nervosa e desconfortável"},
+    {"nome": "Camila", "fantasia": "A Freira", "papel": "suspeita", "desc": "Calma e desdenhosa"},
+    {"nome": "Thiago", "fantasia": "Jigsaw", "papel": "suspeito", "desc": "Metódico e lógico"},
+    {"nome": "Henrique", "fantasia": "Jason", "papel": "suspeito", "desc": "Barulhento e impulsivo"},
+    {"nome": "Bruno", "fantasia": "Freddy Krueger", "papel": "suspeito", "desc": "Bêbado e nervoso"},
+    {"nome": "Iris", "fantasia": "Samara", "papel": "suspeita", "desc": "Supersticiosa e sombria"},
+    {"nome": "Pedro", "fantasia": "Michael Myers", "papel": "suspeito", "desc": "Silencioso e inquietante"},
+    {"nome": "Clara", "fantasia": "-", "papel": "testemunha", "desc": "Namorada de Matheuz"},
 ]
 
 # --- Dados de Locais e Itens ---
-LOCAIS_BASE = [
-    "Salao principal",
-    "Cozinha antiga",
-    "Biblioteca",
-    "Porao",
-    "Jardim dos fundos",
-]
+LOCAIS_BASE = ["Salao principal", "Cozinha", "Biblioteca", "Jardim"]
+ITENS_BASE = ["Faca de cozinha", "Garrafa de vinho", "Livro (Rixa)", "Livro (Rasgado)"]
 
-ITENS_BASE = [
-    "Faca de brinquedo",
-    "Faca verdadeira (nao localizada)",
-    "Tesoura adinha (adereco)",
-    "Lupa (prop do Lucas)",
-    "Pistola falsa (adereco)",
-    "Pistola verdadeira (no bau)",
-]
-
-ITENS_LOCAL_FIXO = {
-    "Faca de brinquedo": "Cozinha antiga",
-    "Lupa (prop do Lucas)": "Biblioteca",
-    "Pistola verdadeira (no bau)": "Porao",
-}
-
-# --- Dados de Lógica (Fatos e Premissas) ---
+# --- DADOS DE LÓGICA (Baseados no Ato II) ---
 FATOS_TEXTO = {
-    "P1": "L: Lucas esta morto.",
-    "P2": "D: Documentos contra Matheuz na secao oculta da biblioteca.",
-    "P3": "C: Clara foi a ultima a ver Lucas indo a biblioteca.",
-    "P4": "B: Rafaela foi vista com sangue e se movendo furtivamente.",
-    "P5": "M <-> D: Documentos implicam motivo para Matheuz (e vice-versa).",
-    "P6": "S: Matheuz tem forca/meios para dominar a vitima.",
-    "P7": "P: Peca de quebra-cabeca ensanguentada no porao (ligacao com Thiago).",
-    "P8": "J: Julia encontrou rastro de sangue e o documento final.",
-    "P9": "G: Pistola verdadeira guardada no porao.",
-    "P10": "(B ^ C) -> O: Se B e C entao Rafaela teve oportunidade na area da biblioteca.",
-    "P11": "(M ^ S) -> SusM: Se motivo e meios, Matheuz e principal suspeito.",
-    "P12": "H: Henrique foi visto agindo por impulso durante a festa.",
-    "P13": "T: Thiago estava fascinado com enigmas e quebra-cabecas.",
-    "P14": "K: Camila foi vista perto do porao antes do desaparecimento.",
-    "P15": "I: Iris escutou um grito vindo do porao.",
-    "P16": "F: Uma faca de brinquedo foi encontrada quebrada na cozinha.",
-    "P17": "A: Bruno estava visivelmente alcoolizado durante a festa.",
-    "P18": "Q: Pedro desapareceu temporariamente durante um momento tenso.",
-    "P19": "(P ^ T) -> ThiagoSusp: Peca ensanguentada + fascinacao por quebra-cabecas torna Thiago suspeito.",
-    "P20": "~A -> BrunoCoerente: Se Bruno nao estava alcoolizado, seu depoimento e confiavel.",
+    # Pistas da Cozinha (Ato II)
+    "P1": "Faca_Sumida: A faca de cozinha desapareceu. Henrique foi o último a usar.",
+    "P2": "Vinho_Bebido: Julia e Rafaela beberam muito vinho na cozinha.",
+    "P3": "Manchas_Duvidosas: Há manchas vermelhas ambíguas no chão da cozinha.",
+    # Pistas da Biblioteca (Ato II)
+    "P4": "Rixa_Antiga: Há uma rixa de sangue histórica entre as famílias Holloway (Matheuz) e Moura (Lucas).",
+    "P5": "Livro_Vinganca: Um livro sobre a rixa foi rasgado, deixando as palavras 'vingança' e 'herança'.",
+    # Pistas dos Interrogatórios (Ato II)
+    "P6": "Clara_Viu_Briga: Clara viu Lucas e Rafaela discutindo discretamente.",
+    "P7": "Julia_Confirma_Ressentimento: Julia confirma que Rafaela estava ressentida com Lucas.",
+    "P8": "Rafaela_Mente_Alibi: Rafaela diz que ficou com Julia (que estava bêbada e não lembra).",
+    "P9": "Thiago_Nega_Alibi_Rafaela: Thiago (testemunha sóbria) afirma que Rafaela NÃO estava no salão.",
+    "P10": "Bruno_Ouviu_Passos: Bruno (bêbado) ouviu passos pesados da cozinha.",
+    "P11": "Iris_Vento_Biblioteca: Iris sentiu um 'vento frio vindo da biblioteca' (Eco da rixa).",
 }
 
 ATOMICOS_TEXTO = {
-    "L": "Lucas esta morto",
-    "D": "Documentos comprometem Matheuz",
-    "C": "Clara viu Lucas ir a biblioteca",
-    "B": "Rafaela coberta de sangue e furtiva",
-    "M": "Matheuz tinha motivo",
-    "S": "Matheuz tem meios/forca",
-    "P": "Peca de quebra-cabeca no porao",
-    "J": "Julia achou rastro e documento final",
-    "G": "Pistola verdadeira no porao",
-    "O": "Rafaela teve oportunidade",
-    "SusM": "Matheuz e principal suspeito",
-    "H": "Henrique agiu por impulso",
-    "T": "Thiago fascinado por enigmas",
-    "K": "Camila perto do porao",
-    "I": "Iris escutou grito do porao",
-    "F": "Faca de brinquedo quebrada",
-    "A": "Bruno alcoolizado",
-    "Q": "Pedro desapareceu temporariamente",
-    "ThiagoSusp": "Thiago e suspeito pela peca",
-    "BrunoCoerente": "Depoimento de Bruno e confiavel",
+    "Faca_Sumida": "Pista: Faca da cozinha sumiu",
+    "Vinho_Bebido": "Pista: Julia e Rafaela beberam",
+    "Manchas_Duvidosas": "Pista: Manchas vermelhas no chão",
+    "Rixa_Antiga": "Pista: Rixa de família (Holloway/Moura)",
+    "Livro_Vinganca": "Pista: Livro rasgado ('Vingança')",
+    "Clara_Viu_Briga": "Depoimento: Clara viu L. e R. discutindo",
+    "Julia_Confirma_Ressentimento": "Depoimento: Julia confirma ressentimento de R.",
+    "Rafaela_Mente_Alibi": "Contradição: Álibi de Rafaela é fraco",
+    "Thiago_Nega_Alibi_Rafaela": "Depoimento: Thiago confirma que Rafaela saiu",
+    "Bruno_Ouviu_Passos": "Depoimento: Bruno ouviu passos da cozinha",
+    "Iris_Vento_Biblioteca": "Depoimento: Iris sentiu 'vento da biblioteca'",
+    # Inferências Lógicas (O que o jogador descobre)
+    "Rafaela_Motivo_Pessoal": "INFERÊNCIA: Rafaela tinha motivo pessoal",
+    "Rafaela_Sem_Alibi": "INFERÊNCIA: Rafaela não tem álibi",
+    "Susp_Matheuz": "INFERÊNCIA: Matheuz é suspeito (Rixa)",
+    "Susp_Henrique": "INFERÊNCIA: Henrique é suspeito (Faca + Passos)",
+    "CULPADA_RAFAELA": "CONCLUSÃO: Rafaela é a assassina",
 }
 
-
-# --- Catálogo de Cenas (O GRANDE) ---
+# --- Catálogo de Cenas (SUA NOVA HISTÓRIA COMPLETA) ---
 CENAS: Dict[str, Cena] = {
+    # --- ATO I: INTRODUÇÃO ---
     "intro": Cena(
-        titulo="31 de Outubro - Mansao Holloway",
+        titulo="Mansão Holloway",
         texto=[
-            "A neblina cobre os jardins da mansao Holloway.",
-            "Uma festa de Halloween esta em pleno andamento.",
-            "Convidados fantasiados circulam entre os comodos decorados.",
-            "Mas algo terrivel esta prestes a acontecer...",
+            "Você é um convidado de última hora para uma festa de Halloween.",
+            "O convite veio de Matheuz Holloway, seu colega recente da faculdade.",
+            "A mansão é conhecida por boatos estranhos: desaparecimentos,",
+            "luzes que se acendem sozinhas e vultos vistos pelas janelas.",
         ],
-        opcoes=[("Continuar", "chegada")],
-        auto_avanca=False,
+        opcoes=[("Chegar na festa", "chegada")],
     ),
     "chegada": Cena(
-        titulo="Salao Principal - 22h15",
+        titulo="A Chegada",
         texto=[
-            "Voce e um detetive convidado para a festa.",
-            "A musica alta ecoa. Luzes laranjas piscam. Fumaca artificial permeia o ar.",
-            "Matheuz Holloway, o anfitriao, vestido como Art, o Palhaco,",
-            "cumprimenta os convidados com um sorriso perturbador.",
+            "A chuva cai fina. Tochas iluminam o caminho de pedras.",
+            "Matheuz te recebe, vestido como Art, o Palhaço.",
+            "'Finalmente! Pensei que não viria.'",
+            "'Hoje à noite, a Mansão Holloway revive seu passado. Entre!'",
         ],
         personagem="Matheuz Holloway",
-        opcoes=[
-            ("Explorar a festa", "exploracao_festa"),
-        ],
+        opcoes=[("Entrar no Salão", "salao_1")],
     ),
-    "exploracao_festa": Cena(
-        titulo="Explorando a Mansao",
+    "salao_1": Cena(
+        titulo="O Salão Principal",
         texto=[
-            "Voce observa os convidados:",
-            "Lucas (Sherlock Holmes) conversa animadamente com Clara.",
-            "Rafaela (Carrie) passa rapidamente, manchas vermelhas na roupa.",
-            "Julia (Ghost Face) fotografa detalhes da decoracao.",
-            "Thiago (Jigsaw) monta um quebra-cabeca no canto do salao.",
+            "Música suave toca, fantasias elaboradas enchem o ambiente.",
+            "Você conhece Camila (A Freira) e Thiago (Jigsaw).",
+            "Eles explicam que o grupo está espalhado pela casa:",
+            "na cozinha, na biblioteca e no jardim.",
         ],
-        opcoes=[
-            ("Conversar com Lucas", "dialogo_lucas"),
-            ("Observar Rafaela de perto", "observar_rafaela"),
-            ("Ir para a Biblioteca", "biblioteca_1"),
-        ],
-    ),
-    "observar_rafaela": Cena(
-        titulo="Observando Rafaela",
-        texto=[
-            "Voce se aproxima discretamente de Rafaela.",
-            "As manchas vermelhas em sua roupa parecem frescas.",
-            "Ela se move de forma estranha, olhando para tras constantemente.",
-            "Quando percebe sua presenca, forca um sorriso nervoso.",
-            "'Ah, e so ketchup da decoracao! Sou desastrada...'",
-        ],
-        personagem="Rafaela",
-        revela_premissa="P4",
-        opcoes=[
-            ("Continuar investigando", "exploracao_festa"),
-            ("Ir para a biblioteca", "biblioteca_1"),
-        ],
-    ),
-    "dialogo_lucas": Cena(
-        titulo="Conversa com Lucas",
-        texto=[
-            "Lucas ajusta seu cacheco e olha para voce com interesse.",
-        ],
-        personagem="Lucas",
-        opcoes=[
-            ("'Esta curtindo a festa?'", "lucas_resposta_1"),
-        ],
-    ),
-    "lucas_resposta_1": Cena(
-        titulo="Lucas fala",
-        texto=[
-            "'Para ser honesto, vim aqui por outro motivo.'",
-            "'Descobri algo sobre a familia Holloway... documentos comprometedores.'",
-            "'Estao escondidos em algum lugar desta mansao.'",
-            "'Se voce me der licenca, vou investigar a biblioteca.'",
-        ],
-        personagem="Lucas",
-        revela_premissa="P2",
-        opcoes=[("Ir junto a biblioteca", "biblioteca_1"), ("Deixa-lo ir sozinho", "lucas_sai")],
-    ),
-    "lucas_sai": Cena(
-        titulo="Lucas se afasta",
-        texto=[
-            "Lucas acena e caminha em direcao a biblioteca.",
-            "Clara, observando de longe, comenta: 'Ele sempre foi curioso demais.'",
-        ],
-        personagem="Clara",
-        revela_premissa="P3",
-        opcoes=[("Voltar ao salao", "volta_salao_pre_crime")],
-    ),
-    "biblioteca_1": Cena(
-        titulo="Biblioteca - 22h40",
-        texto=[
-            "Estantes altas repletas de livros empoeirados.",
-            "Uma lupa (adereco de Lucas) esta sobre o sofa.",
-            "Voce nota uma parede com um painel diferente...",
-        ],
-        local="Biblioteca",
-        opcoes=[
-            ("Examinar a parede", "parede_secreta"),
-            ("Voltar ao salao", "volta_salao_pre_crime"),
-        ],
-    ),
-    "parede_secreta": Cena(
-        titulo="Secao Secreta",
-        texto=[
-            "Voce pressiona o painel. Uma porta oculta se abre.",
-            "Dentro, caixas com documentos. No topo, uma pasta com o nome:",
-            "'MATHEUZ HOLLOWAY - CONFIDENCIAL'",
-            "Documentos indicam envolvimento em crimes financeiros da familia.",
-        ],
-        revela_premissa="P2",
-        opcoes=[("Pegar os documentos", "pega_docs"), ("Deixar para depois", "volta_salao_pre_crime")],
-    ),
-    "pega_docs": Cena(
-        titulo="Evidencia Obtida",
-        texto=[
-            "Voce guarda copias dos documentos.",
-            "De repente, ouve um grito abafado vindo do andar de cima!",
-        ],
-        opcoes=[("Correr para o som", "descobre_corpo")],
-    ),
-    "volta_salao_pre_crime": Cena(
-        titulo="De volta ao Salao - 23h00",
-        texto=[
-            "A festa continua. Bruno (Freddy) ri alto, visivelmente bebado.",
-            "Iris (Samara) se aproxima de voce, sussurrando:",
-            "'Escutei um grito vindo do porao ha pouco...'",
-        ],
-        personagem="Iris",
-        revela_premissa="P15",
-        opcoes=[("Ir ao porao", "porao_1"), ("Procurar Lucas", "descobre_corpo")],
-    ),
-    "porao_1": Cena(
-        titulo="Porao - Escuro e Umido",
-        texto=[
-            "Voce desce as escadas rangentes.",
-            "Caixas antigas, teias de aranha. Um bau de madeira no canto.",
-            "Dentro do bau: uma pistola verdadeira, bem conservada.",
-            "Ao lado, uma peca de quebra-cabeca... ensanguentada.",
-        ],
-        local="Porao",
-        revela_premissa="P7",
-        opcoes=[("Examinar a peca", "peca_ensanguentada"), ("Voltar ao salao", "volta_salao_2")],
-    ),
-    "peca_ensanguentada": Cena(
-        titulo="Peca de Quebra-Cabeca",
-        texto=[
-            "A peca tem sangue fresco. Voce lembra: Thiago montava um quebra-cabeca.",
-            "Conexao direta com ele.",
-            "Aplica P19: (P ^ T) -> ThiagoSusp",
-        ],
-        revela_premissa="P13",
-        opcoes=[("Subir para confrontar Thiago", "volta_salao_2")],
-    ),
-    "volta_salao_2": Cena(
-        titulo="Salao - Silencio Repentino",
-        texto=[
-            "A musica foi cortada. Convidados se reunem, murmurando.",
-            "Julia (Ghost Face) desce correndo as escadas, palida.",
-            "'Encontrei... encontrei Lucas! Ele esta morto!'",
-        ],
-        personagem="Julia",
-        revela_premissa="P1",
-        opcoes=[("Ir ate o corpo", "descobre_corpo")],
-    ),
-    "descobre_corpo": Cena(
-        titulo="Quarto do 2º Andar - Cena do Crime",
-        texto=[
-            "Lucas esta caido no chao, sem vida.",
-            "Ha um rastro de sangue levando ate a janela.",
-            "Julia aponta: 'Segui o rastro e achei mais documentos la embaixo.'",
-            "Todos os olhares se voltam para Rafaela, com sangue na roupa.",
-        ],
-        personagem="Julia",
-        revela_premissa="P8",
-        opcoes=[("Analisar a cena", "analise_cena")],
-    ),
-    "analise_cena": Cena(
-        titulo="Investigacao da Cena",
-        texto=[
-            "Voce observa:",
-            "- Rafaela esta visivelmente nervosa, com manchas de sangue.",
-            "- Clara confirma: 'Eu vi Lucas indo para a biblioteca mais cedo.'",
-            "- Matheuz permanece calado, mas sua expressao e tensa.",
-            "- Thiago nega qualquer envolvimento, mas a peca do quebra-cabeca...",
-        ],
-        revela_premissa="P3",
-        opcoes=[
-            ("Interrogar Rafaela", "interroga_rafaela"),
-            ("Interrogar Matheuz", "interroga_matheuz"),
-            ("Reunir as evidencias", "reunir_evidencias"),
-        ],
-    ),
-    "interroga_rafaela": Cena(
-        titulo="Interrogatorio - Rafaela",
-        texto=[
-            "'Eu... eu estava na cozinha. Derrubei ketchup em mim!'",
-            "'Nao tenho nada a ver com isso!'",
-            "Sua voz treme. Ela evita contato visual.",
-        ],
-        personagem="Rafaela",
-        revela_premissa="P4",
-        opcoes=[("Pressionar mais", "rafaela_confessa_parcial"), ("Interrogar outros", "analise_cena")],
-    ),
-    "rafaela_confessa_parcial": Cena(
-        titulo="Rafaela vacila",
-        texto=[
-            "'Ta bom! Eu estava perto da biblioteca, sim!'",
-            "'Mas so porque... porque ouvi vozes alteradas.'",
-            "'Quando cheguei, Lucas ja estava... assim.'",
-            "Ela claramente mente. Voce sente que ela sabe mais.",
-            "P10 confirmada: (B ^ C) -> O",
-        ],
-        personagem="Rafaela",
-        revela_premissa="P10",
-        opcoes=[("Continuar investigacao", "reunir_evidencias")],
-    ),
-    "interroga_matheuz": Cena(
-        titulo="Interrogatorio - Matheuz",
-        texto=[
-            "'Eu sou o anfitriao. Estava no salao o tempo todo.'",
-            "'Claro que estou chateado. Lucas era meu... conhecido.'",
-            "Voce mostra os documentos comprometedores.",
-            "'Isso... isso nao prova nada!'",
-        ],
-        personagem="Matheuz Holloway",
-        revela_premissa="P5",
-        opcoes=[("Analisar motivo e meios", "analise_matheuz"), ("Voltar a investigacao", "reunir_evidencias")],
-    ),
-    "analise_matheuz": Cena(
-        titulo="Analise Logica - Matheuz",
-        texto=[
-            "Premissa P5: M <-> D (Documentos implicam motivo)",
-            "Premissa P6: S (Matheuz tem forca para dominar vitima)",
-            "Logo, por P11: (M ^ S) -> SusM",
-            "Matheuz e o PRINCIPAL SUSPEITO por motivo e meios.",
-            "Mas... as evidencias apontam Rafaela como executora.",
-        ],
-        revela_premissa="P11",
-        opcoes=[("Fazer acusacao final", "escolha_acusacao")],
-    ),
-    "reunir_evidencias": Cena(
-        titulo="Reunindo as Provas",
-        texto=[
-            "Voce revisa mentalmente:",
-            "1. Lucas morto (P1)",
-            "2. Documentos contra Matheuz (P2, P5)",
-            "3. Clara viu Lucas ir a biblioteca (P3)",
-            "4. Rafaela com sangue e furtiva (P4)",
-            "5. Rafaela teve oportunidade (P10: B ^ C -> O)",
-            "6. Matheuz = principal suspeito por motivo/meios (P11)",
-            "Hora de decidir.",
-        ],
-        opcoes=[("Acusar alguem", "escolha_acusacao")],
-    ),
-    "escolha_acusacao": Cena(
-        titulo="Momento da Verdade",
-        texto=[
-            "Todos aguardam sua conclusao.",
-            "Quem voce acusa como assassino(a)?",
-        ],
-        opcoes=[],  # sera populado dinamicamente
+        personagem="Camila",
+        opcoes=[("Explorar a mansão", "checar_fim_ato1")], # <-- MUDADO: Leva ao HUB LÓGICO
     ),
     
-    # --- Cenas Finais ---
+    # --- ATO I: HUB DE EXPLORAÇÃO (LÓGICO) ---
+    "checar_fim_ato1": Cena(
+        titulo="Explorando a Mansão (Ato I)",
+        texto=[
+            "Onde você gostaria de ir agora?",
+            "Preciso conhecer todos os locais antes do discurso de Matheuz."
+        ],
+        personagem="Pensamento",
+        opcoes=[], # <-- IMPORTANTE: As opções serão geradas dinamicamente
+    ),
+
+    # --- ATO I: COZINHA ---
+    "cozinha_ato1": Cena(
+        titulo="A Cozinha (Ato I)",
+        local="Cozinha",
+        texto=[
+            "O ambiente é animado, cheiro de especiarias e vinho.",
+            "Lucas (Sherlock) brinca que está 'investigando os ingredientes'.",
+            "Rafaela (Carrie) é silenciosa e observa a todos.",
+            "Julia (Ghost Face) ri nervosamente, parecendo desconfortável.",
+            "Henrique (Jason) corta frios com uma faca grande, rindo alto.",
+        ],
+        visita_local_ato1="cozinha", # <-- MARCA LOCAL COMO VISITADO
+        opcoes=[
+            ("Conversar com Lucas", "dialogo_lucas_ato1"),
+            ("Voltar ao Salão", "checar_fim_ato1"), # <-- MUDADO: Volta ao HUB LÓGICO
+        ],
+    ),
+    "dialogo_lucas_ato1": Cena(
+        titulo="A Cozinha (Ato I)",
+        local="Cozinha",
+        texto=[
+            "'Interessante, não é? Tantas fantasias... tantas máscaras.'",
+            "'Dizem que esta casa adora segredos. Estou começando a acreditar.'",
+        ],
+        personagem="Lucas",
+        opcoes=[("Voltar ao Salão", "checar_fim_ato1")], # <-- MUDADO: Volta ao HUB LÓGICO
+    ),
+    
+    # --- ATO I: JARDIM ---
+    "jardim_ato1": Cena(
+        titulo="O Jardim (Ato I)",
+        local="Jardim",
+        texto=[
+            "O ar frio e a neblina dão ao jardim um tom espectral.",
+            "Matheuz e sua namorada Clara estão perto de uma fonte antiga.",
+            "Há uma tensão leve no ar.",
+            "'O lugar sempre me causou arrepios.'",
+        ],
+        personagem="Clara",
+        visita_local_ato1="jardim", # <-- MARCA LOCAL COMO VISITADO
+        opcoes=[
+            ("Falar com Matheuz", "dialogo_matheuz_ato1"),
+        ],
+    ),
+    "dialogo_matheuz_ato1": Cena(
+        titulo="O Jardim (Ato I)",
+        local="Jardim",
+        texto=[
+            "'Não ligue para ela. Em breve, todos devem se reunir no salão.'",
+            "'Farei um breve discurso de boas-vindas.'",
+        ],
+        personagem="Matheuz Holloway",
+        opcoes=[("Voltar ao Salão", "checar_fim_ato1")], # <-- MUDADO: Volta ao HUB LÓGICO
+    ),
+
+    # --- ATO I: BIBLIOTECA ---
+    "biblioteca_ato1": Cena(
+        titulo="A Biblioteca (Ato I)",
+        local="Biblioteca",
+        texto=[
+            "Lustres velhos e livros empoeirados.",
+            "Você encontra Bruno, Íris e Pedro.",
+            "Eles alegam estar 'fazendo um trabalho da faculdade'.",
+            "Mas parecem mais interessados em algo nas estantes.",
+        ],
+        visita_local_ato1="biblioteca", # <-- MARCA LOCAL COMO VISITADO
+        opcoes=[
+            ("Falar com Iris", "dialogo_iris_ato1"),
+            ("Voltar ao Salão", "checar_fim_ato1"), # <-- MUDADO: Volta ao HUB LÓGICO
+        ],
+    ),
+    "dialogo_iris_ato1": Cena(
+        titulo="A Biblioteca (Ato I)",
+        local="Biblioteca",
+        texto=[
+            "'Você já ouviu falar do Livro Negro dos Holloway...?'",
+            "'Uma lenda local. Dizem que... ah, deixa pra lá.'",
+        ],
+        personagem="Iris",
+        opcoes=[("Voltar ao Salão", "checar_fim_ato1")], # <-- MUDADO: Volta ao HUB LÓGICO
+    ),
+
+    # --- ATO I: O ASSASSINATO (O resto segue igual) ---
+    "discurso_inicio": Cena(
+        titulo="O Discurso",
+        local="Salao principal",
+        texto=[
+            "Você visitou todos os cômodos. O grupo todo se reúne.",
+            "Matheuz levanta uma taça de vinho.",
+            "'Brindemos às memórias, aos reencontros...'",
+            "'...e aos segredos que nunca deveriam ter sido revelados!'",
+        ],
+        personagem="Matheuz Holloway",
+        opcoes=[("Brindar", "discurso_morte")],
+    ),
+    "discurso_morte": Cena(
+        # ... (cena igual) ...
+        titulo="O Discurso",
+        local="Salao principal",
+        texto=[
+            "Um raio corta o céu, um trovão estoura.",
+            "A LUZ SE APAGA!",
+            "...",
+            "Um grito ecoa na escuridão.",
+            "...",
+            "Quando as luzes de emergência voltam...",
+            "Lucas está caído. Uma faca cravada em seu peito.",
+        ],
+        opcoes=[("O CAOS", "discurso_caos")],
+    ),
+    "discurso_caos": Cena(
+        # ... (cena igual) ...
+        titulo="O Caos",
+        local="Salao principal",
+        texto=[
+            "Gritos. Discussões. Passos apressados.",
+            "Mas você, o convidado de fora, toma a frente.",
+            "'Calma! Ninguém sai daqui.'",
+            "'Até a polícia chegar, precisamos descobrir o que aconteceu.'",
+            "'Um de nós é o assassino.'",
+        ],
+        personagem="Pensamento",
+        opcoes=[("O Jogo Começa.", "ato_2_inicio")],
+    ),
+
+
+    # --- INÍCIO DO ATO II (Segue igual ao que fizemos) ---
+    "ato_2_inicio": Cena(
+        titulo="🕯️ Ato II — Ecos na Mansão",
+        local="Salao principal",
+        texto=[
+            "A tempestade lá fora ganha força. Trovões ecoam.",
+            "O corpo de Lucas foi coberto com um lençol branco.",
+            "A mancha vermelha se espalha lentamente pelo tecido.",
+            "Matheuz se aproxima de você.",
+            "'Preciso investigar. Segure todos aqui no salão.'",
+        ],
+        personagem="Pensamento",
+        opcoes=[
+            ("Falar com Matheuz", "ato_2_matheuz"),
+        ],
+    ),
+    "ato_2_matheuz": Cena(
+        titulo="🕯️ Ato II — Ecos na Mansão",
+        local="Salao principal",
+        texto=["'Certo. Mas cuidado… essa casa tem mais segredos do que eu mesmo conheço.'"],
+        personagem="Matheuz Holloway",
+        opcoes=[
+            ("Iniciar investigação", "ato_2_hub"),
+        ],
+    ),
+    "ato_2_hub": Cena(
+        titulo="O Salão Principal (HUB)",
+        local="Salao principal",
+        texto=[
+            "O clima é de medo e desconfiança.",
+            "A escolha é sua: permanecer no salão e interrogar os convidados,",
+            "ou vasculhar os outros cômodos — a cozinha e a biblioteca.",
+        ],
+        personagem="Pensamento",
+        opcoes=[
+            ("Vasculhar a Cozinha", "cozinha_1"),
+            ("Vasculhar a Biblioteca", "biblioteca_1"),
+            ("Interrogar Convidados", "interrogar_hub"),
+            ("Revisar Pistas e Acusar", "escolha_acusacao"),
+        ],
+    ),
+
+    # --- ATO II: VASCULHAR A COZINHA ---
+    "cozinha_1": Cena(
+        titulo="🍷 A Cozinha",
+        local="Cozinha",
+        texto=[
+            "Você entra devagar. O ambiente está silencioso demais.",
+            "Restos de comida e taças espalhadas pelo balcão.",
+            "Você observa atentamente...",
+        ],
+        opcoes=[
+            ("Examinar a faca (P1)", "cozinha_faca"),
+            ("Examinar o vinho (P2)", "cozinha_vinho"),
+            ("Examinar as manchas (P3)", "cozinha_manchas"),
+            ("Voltar ao Salão", "ato_2_hub"),
+        ],
+    ),
+    "cozinha_faca": Cena(
+        titulo="🍷 A Cozinha",
+        local="Cozinha",
+        texto=["A faca de cozinha desapareceu.",
+               "Era a mesma que Henrique (Jason) usava no Ato I.",
+               "No lugar, há apenas uma marca úmida sobre a tábua."],
+        personagem="Pensamento",
+        revela_premissa="P1", # Faca_Sumida
+        opcoes=[("Voltar às pistas da Cozinha", "cozinha_1")],
+    ),
+    "cozinha_vinho": Cena(
+        titulo="🍷 A Cozinha",
+        local="Cozinha",
+        texto=["A garrafa de vinho está vazia.",
+               "Julia e Rafaela bebiam dela. Há mais duas taças sujas.",
+               "Talvez estivessem alteradas?"],
+        personagem="Pensamento",
+        revela_premissa="P2", # Vinho_Bebido
+        opcoes=[("Voltar às pistas da Cozinha", "cozinha_1")],
+    ),
+    "cozinha_manchas": Cena(
+        titulo="🍷 A Cozinha",
+        local="Cozinha",
+        texto=["Manchas vermelhas no chão.",
+               "O cheiro é confuso — poderia ser sangue, mas também molho.",
+               "A dúvida me deixa inquieto."],
+        personagem="Pensamento",
+        revela_premissa="P3", # Manchas_Duvidosas
+        opcoes=[("Voltar às pistas da Cozinha", "cozinha_1")],
+    ),
+
+    # --- ATO II: VASCULHAR A BIBLIOTECA ---
+    "biblioteca_1": Cena(
+        titulo="📚 A Biblioteca",
+        local="Biblioteca",
+        texto=[
+            "A luz da lareira vacila. O ar cheira a poeira antiga.",
+            "Na mesa central, há um livro recém-aberto.",
+        ],
+        opcoes=[
+            ("Ler o livro 'A Disputa' (P4)", "biblioteca_rixa"),
+            ("Ver o livro rasgado (P5)", "biblioteca_rasgado"),
+            ("Voltar ao Salão", "ato_2_hub"),
+        ],
+    ),
+    "biblioteca_rixa": Cena(
+        titulo="📚 A Biblioteca",
+        local="Biblioteca",
+        texto=["'A disputa dos Holloway e os Moura — 1894'.",
+               "Documentos descrevem uma antiga rivalidade entre as duas famílias.",
+               "A do anfitrião (Matheuz) e a do falecido (Lucas).",
+               "Um crime não solucionado entre antepassados."],
+        personagem="Pensamento",
+        revela_premissa="P4", # Rixa_Antiga
+        opcoes=[("Voltar às pistas da Biblioteca", "biblioteca_1")],
+    ),
+    "biblioteca_rasgado": Cena(
+        titulo="📚 A Biblioteca",
+        local="Biblioteca",
+        texto=["O título foi rabiscado. Várias páginas rasgadas.",
+               "Restam fragmentos com palavras: 'vingança', 'herança', 'redenção'.",
+               "Talvez a morte de Lucas seja o eco de algo antigo."],
+        personagem="Pensamento",
+        revela_premissa="P5", # Livro_Vinganca
+        opcoes=[("Voltar às pistas da Biblioteca", "biblioteca_1")],
+    ),
+
+    # --- ATO II: INTERROGATÓRIOS ---
+    "interrogar_hub": Cena(
+        titulo="🎭 Interrogatórios",
+        local="Salao principal",
+        texto=["Hora de separar os fatos da ficção."],
+        personagem="Pensamento",
+        opcoes=[
+            ("Matheuz (Art)", "interrogar_matheuz"),
+            ("Rafaela (Carrie) (P8)", "interrogar_rafaela"),
+            ("Clara (-) (P6)", "interrogar_clara"),
+            ("Julia (Ghost Face) (P7)", "interrogar_julia"),
+            ("Henrique (Jason)", "interrogar_henrique"),
+            ("Camila (Freira)", "interrogar_camila"),
+            ("Thiago (Jigsaw) (P9)", "interrogar_thiago"),
+            ("Bruno (Freddy) (P10)", "interrogar_bruno"),
+            ("Iris (Samara) (P11)", "interrogar_iris"),
+            ("Pedro (Michael)", "interrogar_pedro"),
+            ("Voltar ao Salão", "ato_2_hub"),
+        ],
+    ),
+    
+    # (Resto dos interrogatórios... omitidos por brevidade, mas são os mesmos da sua história)
+    "interrogar_rafaela": Cena(
+        titulo="🎭 Interrogando Rafaela",
+        texto=["'Eu... eu estava tentando me acalmar com Julia na cozinha.'",
+               "Quando perguntada da faca: 'Henrique estava usando. Pergunte a ele.'",
+               "Há manchas em sua fantasia. Ela insiste que é molho."],
+        personagem="Rafaela",
+        revela_premissa="P8", # Rafaela_Mente_Alibi
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_clara": Cena(
+        titulo="🎭 Interrogando Clara",
+        texto=["'Eu... eu vi... Lucas estava discutindo com Rafaela.'",
+               "'Foi um pouco antes do discurso. Parecia sério.'"],
+        personagem="Clara",
+        revela_premissa="P6", # Clara_Viu_Briga
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_julia": Cena(
+        titulo="🎭 Interrogando Julia",
+        texto=["'Não lembro direito, bebi demais (P2).'",
+               "'Mas sim, Rafaela estava nervosa. Ela odeia o Lucas.'",
+               "'Algo sobre uma festa antiga... ela estava muito ressentida.'"],
+        personagem="Julia",
+        revela_premissa="P7", # Julia_Confirma_Ressentimento
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_thiago": Cena(
+        titulo="🎭 Interrogando Thiago",
+        texto=["'Observei a posição de todos.'",
+               "'Rafaela não estava presente no salão quando as luzes apagaram.'",
+               "'Também notei Matheuz tenso antes do discurso.'"],
+        personagem="Thiago",
+        revela_premissa="P9", # Thiago_Nega_Alibi_Rafaela
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_bruno": Cena(
+        titulo="🎭 Interrogando Bruno",
+        texto=["'Eu ouvi, cara! *hic* Passos pesados!'",
+               "'Vindo da cozinha! Pouco antes da luz apagar!'",
+               "Ninguém parece acreditar nele..."],
+        personagem="Bruno",
+        revela_premissa="P10", # Bruno_Ouviu_Passos
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_henrique": Cena(
+        titulo="🎭 Interrogando Henrique",
+        texto=["'Eu larguei a faca na cozinha logo antes das luzes apagarem!'",
+               "'Não tenho sangue nas mãos!'"],
+        personagem="Henrique",
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_matheuz": Cena(
+        titulo="🎭 Interrogando Matheuz",
+        texto=["'Fiquei no salão o tempo todo!'",
+               "'Essa rixa de família (P4)? Coisa do passado! Não tem nada a ver!'",
+               "Ele parece abalado... ou é um bom ator?"],
+        personagem="Matheuz Holloway",
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_camila": Cena(
+        titulo="🎭 Interrogando Camila",
+        texto=["'Nunca confiei em Lucas. Ele adorava provocar.'",
+               "Onde eu estava? 'Rezando... ou tentando.'"],
+        personagem="Camila",
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_iris": Cena(
+        titulo="🎭 Interrogando Iris",
+        texto=["'A casa está reagindo. Um Holloway morreu aqui...'",
+               "'...e agora um Moura cai do mesmo jeito (P4).'",
+               "'Senti um vento frio vindo da biblioteca...'"],
+        personagem="Iris",
+        revela_premissa="P11", # Iris_Vento_Biblioteca
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+    "interrogar_pedro": Cena(
+        titulo="🎭 Interrogando Pedro",
+        texto=["Ficou perto da porta o tempo todo, observando.",
+               "O que ele viu? 'Nem tudo que está morto fica no chão.'",
+               "Inquietante."],
+        personagem="Pedro",
+        opcoes=[("Voltar à lista", "interrogar_hub")],
+    ),
+
+
+    # --- FIM DO JOGO ---
+    "escolha_acusacao": Cena(
+        titulo="⚖️ Decisão Final",
+        texto=[
+            "Você revisa as pistas: a rixa antiga, a faca sumida, os passos...",
+            "Os depoimentos: a briga, o ressentimento, o álibi quebrado...",
+            "Quem é o assassino?",
+        ],
+        personagem="Pensamento",
+        opcoes=[],  # Populado dinamicamente
+    ),
+    
     "final_vitoria": Cena(
         titulo="CASO RESOLVIDO",
         texto=[
-            "Voce aponta para Rafaela.",
-            "'Foi voce. As evidencias sao claras:'",
-            "'Voce estava na area (B ^ C -> O), com sangue nas roupas.'",
-            "'Lucas descobriu os documentos contra Matheuz.'",
-            "'Voce agiu para proteger... ou foi contratada?'",
+            "Você aponta para Rafaela.",
+            "'Foi você. A rixa antiga (P4) era uma distração.'",
+            "'O motivo real era pessoal: você e Lucas discutiram (P6),'",
+            "'e seu ressentimento era conhecido (P7).'",
+            "'Thiago (P9) confirmou que você mentiu sobre seu álibi (P8).'",
             "",
-            "Rafaela abaixa a cabeca e confessa.",
-            "'Eu... eu nao queria. Mas Matheuz me ameacou.'",
-            "'Disse que se Lucas expusesse os documentos, eu tambem cairia.'",
-            "",
-            "A policia e chamada. Caso encerrado.",
+            "Rafaela desaba.",
+            "'Ele merecia! Ele ia estragar tudo... de novo!'",
+            "A polícia é chamada. Caso encerrado.",
             "VITORIA!",
         ],
         opcoes=[],
@@ -388,11 +510,11 @@ CENAS: Dict[str, Cena] = {
         titulo="ERRO FATAL",
         texto=[
             "Sua acusacao esta errada.",
-            "Antes que possa corrigir, Rafaela foge pela janela.",
+            "Enquanto você prende o suspeito errado, Rafaela sorri.",
+            "Ela se mistura à multidão e desaparece na tempestade.",
             "A verdadeira assassina escapou.",
             "",
-            "A culpada era: Rafaela", # Removido o f-string para ser estático
-            "",
+            f"A culpada era: {CULPADO_FIXO_NOME}",
             "DERROTA",
         ],
         opcoes=[],

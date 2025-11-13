@@ -22,19 +22,41 @@ class GamePhase(Enum):
     CONFRONTO = 3
     FINAL = 4
 
-# --- Motor Lógico ---
+# --- Motor Lógico (Baseado na sua nova história) ---
 class Logic:
     def __init__(self):
         self.conhecido: Set[str] = set()
-        # Regras
-        self.equiv: List[Tuple[str, str]] = [("M", "D")]  # M <-> D
-        self.rules_and_impl: List[Tuple[Tuple[str, str], str]] = [
-            (("M", "S"), "SusM"),
-            (("B", "C"), "O"),
-            (("P", "T"), "ThiagoSusp"),
-        ]
-        self.rules_negacao: List[Tuple[str, str]] = [
-            ("A", "BrunoCoerente"),  # ~A -> BrunoCoerente (simplificado)
+        
+        # --- REGRAS NOVAS ---
+        # (Premissas Atomicas, Resultado)
+        
+        # 1. Regra de Susp. Henrique
+        # (Se a faca sumiu E Bruno ouviu passos da cozinha) -> Henrique é suspeito
+        self.regra_susp_henrique = (("Faca_Sumida", "Bruno_Ouviu_Passos"), "Susp_Henrique")
+        
+        # 2. Regra do Motivo Pessoal de Rafaela
+        # (Se Clara viu a briga E Julia confirmou o ressentimento) -> Rafaela tinha motivo
+        self.regra_motivo_rafaela = (("Clara_Viu_Briga", "Julia_Confirma_Ressentimento"), "Rafaela_Motivo_Pessoal")
+        
+        # 3. Regra do Álibi Falso de Rafaela
+        # (Se Thiago nega o álibi) -> O álibi dela é falso
+        self.regra_alibi_rafaela = (("Thiago_Nega_Alibi_Rafaela",), "Rafaela_Sem_Alibi")
+
+        # 4. REGRA DA CULPA (A PRINCIPAL)
+        # (Se Rafaela tinha motivo E o álibi dela é falso) -> ELA É A ASSASSINA
+        self.regra_culpa_rafaela = (("Rafaela_Motivo_Pessoal", "Rafaela_Sem_Alibi"), "CULPADA_RAFAELA")
+
+        # 5. Regra de Susp. Matheuz
+        # (Se existe a rixa antiga) -> Matheuz também é suspeito (pista falsa)
+        self.regra_susp_matheuz = (("Rixa_Antiga",), "Susp_Matheuz")
+        
+        # Guardamos as regras em uma lista para o infer_closure
+        self.rules: List[Tuple[Tuple[str, ...], str]] = [
+            self.regra_susp_henrique,
+            self.regra_motivo_rafaela,
+            self.regra_alibi_rafaela,
+            self.regra_culpa_rafaela,
+            self.regra_susp_matheuz
         ]
 
     def add(self, symbol: str) -> bool:
@@ -48,25 +70,18 @@ class Logic:
         changed = True
         while changed:
             changed = False
-            # Equivalencias (bidirecional)
-            for a, b in self.equiv:
-                if a in self.conhecido and b not in self.conhecido:
-                    self.conhecido.add(b)
-                    added.append(b)
-                    changed = True
-                if b in self.conhecido and a not in self.conhecido:
-                    self.conhecido.add(a)
-                    added.append(a)
-                    changed = True
-            # Implicacoes com conjuncao
-            for (x, y), z in self.rules_and_impl:
-                if x in self.conhecido and y in self.conhecido and z not in self.conhecido:
-                    self.conhecido.add(z)
-                    added.append(z)
+            
+            for premissas, resultado in self.rules:
+                # Verifica se TODAS as premissas estão no set 'conhecido'
+                todas_presentes = all(p in self.conhecido for p in premissas)
+                
+                if todas_presentes and resultado not in self.conhecido:
+                    self.conhecido.add(resultado)
+                    added.append(resultado)
                     changed = True
         return added
 
-# --- Estado do Jogo ---
+# --- Estado do Jogo (ATUALIZADO) ---
 class GameState:
     def __init__(self):
         # Randomizacao controlada
@@ -81,33 +96,28 @@ class GameState:
 
         # Logica
         self.logic = Logic()
+        # --- Mapeamento de Premissas (Baseado na sua nova história) ---
         self.premissas: Dict[str, Tuple[Optional[str], str]] = {
-            "P1": ("L", FATOS_TEXTO["P1"]),
-            "P2": ("D", FATOS_TEXTO["P2"]),
-            "P3": ("C", FATOS_TEXTO["P3"]),
-            "P4": ("B", FATOS_TEXTO["P4"]),
-            "P5": (None, FATOS_TEXTO["P5"]),
-            "P6": ("S", FATOS_TEXTO["P6"]),
-            "P7": ("P", FATOS_TEXTO["P7"]),
-            "P8": ("J", FATOS_TEXTO["P8"]),
-            "P9": ("G", FATOS_TEXTO["P9"]),
-            "P10": (None, FATOS_TEXTO["P10"]),
-            "P11": (None, FATOS_TEXTO["P11"]),
-            "P12": ("H", FATOS_TEXTO["P12"]),
-            "P13": ("T", FATOS_TEXTO["P13"]),
-            "P14": ("K", FATOS_TEXTO["P14"]),
-            "P15": ("I", FATOS_TEXTO["P15"]),
-            "P16": ("F", FATOS_TEXTO["P16"]),
-            "P17": ("A", FATOS_TEXTO["P17"]),
-            "P18": ("Q", FATOS_TEXTO["P18"]),
-            "P19": (None, FATOS_TEXTO["P19"]),
-            "P20": (None, FATOS_TEXTO["P20"]),
+            "P1": ("Faca_Sumida", FATOS_TEXTO["P1"]),
+            "P2": ("Vinho_Bebido", FATOS_TEXTO["P2"]),
+            "P3": ("Manchas_Duvidosas", FATOS_TEXTO["P3"]),
+            "P4": ("Rixa_Antiga", FATOS_TEXTO["P4"]),
+            "P5": ("Livro_Vinganca", FATOS_TEXTO["P5"]),
+            "P6": ("Clara_Viu_Briga", FATOS_TEXTO["P6"]),
+            "P7": ("Julia_Confirma_Ressentimento", FATOS_TEXTO["P7"]),
+            "P8": ("Rafaela_Mente_Alibi", FATOS_TEXTO["P8"]),
+            "P9": ("Thiago_Nega_Alibi_Rafaela", FATOS_TEXTO["P9"]),
+            "P10": ("Bruno_Ouviu_Passos", FATOS_TEXTO["P10"]),
+            "P11": ("Iris_Vento_Biblioteca", FATOS_TEXTO["P11"]),
         }
 
         # Sistema de cenas
-        self.cena_atual: str = "intro"
+        self.cena_atual: str = "intro" # O jogo começa no 'intro'
         self.cena_tempo: float = 0
         self.escolha_selecionada: int = 0
+        
+        # --- CHECKLIST DO ATO I (NOVO) ---
+        self.locais_visitados_ato1: Set[str] = set()
         
         # Placar e estado
         self.pontos = 0
@@ -159,6 +169,13 @@ class GameState:
         """Normaliza string para comparação, removendo acentos."""
         return ''.join(c for c in unicodedata.normalize('NFD', s.lower()) if unicodedata.category(c) != 'Mn')
 
+    # --- FUNÇÃO NOVA ---
+    def visitar_local_ato1(self, local: str):
+        """Adiciona um local ao checklist do Ato I."""
+        if local not in self.locais_visitados_ato1:
+            self.locais_visitados_ato1.add(local)
+            print(f"Locais visitados Ato 1: {self.locais_visitados_ato1}")
+
     def revelar_premissa(self, pid: str):
         if pid and pid in self.premissas and pid not in self.revelados:
             self.revelados.append(pid)
@@ -167,19 +184,28 @@ class GameState:
                 if self.logic.add(simbolo):
                     # Se uma nova premissa atômica foi adicionada,
                     # tenta inferir mais coisas
-                    novos = self.logic.infer_closure()
-                    # (Poderia ter um feedback para o jogador aqui)
+                    novos_fatos = self.logic.infer_closure()
+                    if novos_fatos:
+                        # (Opcional: Adicionar feedback visual/sonoro aqui)
+                        print(f"Novas inferências: {novos_fatos}")
             self.descobertas += 1
             self.pontos += 25
 
+    # --- FUNÇÃO ATUALIZADA ---
     def ir_para_cena(self, cena_id: str):
         if cena_id in CENAS:
             self.cena_atual = cena_id
             self.cena_tempo = 0
             self.escolha_selecionada = 0
             cena = CENAS[cena_id]
+            
+            # Chama revelar_premissa (para Ato II)
             if cena.revela_premissa:
                 self.revelar_premissa(cena.revela_premissa)
+                
+            # Chama visitar_local_ato1 (para Ato I)
+            if cena.visita_local_ato1:
+                self.visitar_local_ato1(cena.visita_local_ato1)
         else:
             print(f"Erro: Cena '{cena_id}' não encontrada!")
             self.cena_atual = "intro" # Volta para o início
@@ -189,7 +215,8 @@ class GameState:
         culp_norm = self._norm(self.culpada["nome"])
         
         # Lógica de acusação
-        if alvo_ok == culp_norm or ("rafaela" in alvo_ok):
+        # O jogador vence se acusar a pessoa certa
+        if (alvo_ok == culp_norm or "rafaela" in alvo_ok):
             self.pontos += 500 + self.descobertas * 30
             self.vitoria = True
             self.cena_atual = "final_vitoria"

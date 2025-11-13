@@ -3,7 +3,7 @@ import pygame
 
 # Importa dos nossos próprios módulos
 from settings import (
-    WIDTH, HEIGHT, FONT_SMALL, FONT, FONT_MED, BIGFONT
+    WIDTH, HEIGHT, FONT_SMALL, FONT, FONT_MED, BIGFONT, FONT_ITALIC
 )
 from utilities import quebrar_texto
 from game_data import CENAS, ATOMICOS_TEXTO
@@ -34,7 +34,10 @@ def desenhar_cena_narrativa(screen: pygame.Surface, state):
     
     # --- Retrato do Personagem ---
     margin_left_texto = 60 # Margem padrão
-    if cena.personagem and cena.personagem in state.personagem_sprites:
+    
+    # --- LÓGICA DE PENSAMENTO ADICIONADA ---
+    # Só desenha o retrato se for um personagem real, e não um "Pensamento"
+    if cena.personagem and cena.personagem != "Pensamento" and cena.personagem in state.personagem_sprites:
         margin_left_texto = 200 # Aumenta margem para caber retrato
         
         # Box para o retrato
@@ -59,25 +62,54 @@ def desenhar_cena_narrativa(screen: pygame.Surface, state):
     max_text_width = WIDTH - margin_left_texto - 360  # Deixa espaco para painel direito
     
     for linha in cena.texto:
-        cor = (230, 230, 230)
-        if cena.personagem and linha.startswith("'"):
+        # --- LÓGICA DE PENSAMENTO ADICIONADA ---
+        fonte_usada = FONT
+        cor = (230, 230, 230) # Narração padrão
+        
+        if cena.personagem == "Pensamento":
+            fonte_usada = FONT_ITALIC
+            cor = (180, 255, 255)  # Ciano (para pensamentos)
+        elif cena.personagem and linha.startswith("'"):
             cor = (255, 255, 150)  # Dialogos em amarelo
         
-        linhas_quebradas = quebrar_texto(linha, FONT, max_text_width)
+        # O resto do código permanece quase igual
+        linhas_quebradas = quebrar_texto(linha, fonte_usada, max_text_width)
         
         for sub_linha in linhas_quebradas:
             if y_texto > HEIGHT - 260: # Para antes da area de opcoes
                 break
-            texto_surf = FONT.render(sub_linha, True, cor)
+            # Usa a fonte e cor definidas
+            texto_surf = fonte_usada.render(sub_linha, True, cor) 
             screen.blit(texto_surf, (margin_left_texto, y_texto))
             y_texto += 24
         if y_texto > HEIGHT - 260:
             break
             
-    # --- Opcoes de Escolha ---
+    # --- Opcoes de Escolha (ATUALIZADO) ---
     opcoes = []
-    if state.cena_atual == "escolha_acusacao":
-        opcoes = [(f"{p['nome']} ({p['fantasia']})", "acusar_" + p["nome"]) for p in state.personagens]
+    
+    # --- LÓGICA DO HUB DO ATO I (NOVA) ---
+    if state.cena_atual == "checar_fim_ato1":
+        locais_visitados = state.locais_visitados_ato1
+        
+        if "cozinha" not in locais_visitados:
+            opcoes.append(("Ir à Cozinha", "cozinha_ato1"))
+        if "jardim" not in locais_visitados:
+            opcoes.append(("Ir ao Jardim", "jardim_ato1"))
+        if "biblioteca" not in locais_visitados:
+            opcoes.append(("Ir à Biblioteca", "biblioteca_ato1"))
+            
+        # Se todas as opções foram visitadas, força o discurso
+        if not opcoes:
+            # Isso força a transição IMEDIATAMENTE
+            state.ir_para_cena("discurso_inicio")
+            return # Sai da função de render para evitar erro na próxima linha
+    
+    # --- Lógica de Acusação (Existente) ---
+    elif state.cena_atual == "escolha_acusacao":
+        opcoes = [(f"{p['nome']} ({p['fantasia']})", "acusar_" + p["nome"]) for p in state.personagens if p["papel"] != "vitima"]
+    
+    # --- Lógica Padrão (Existente) ---
     elif cena.opcoes:
         opcoes = cena.opcoes
         
@@ -95,17 +127,31 @@ def desenhar_cena_narrativa(screen: pygame.Surface, state):
         
         max_opcao_width = box_width - 60
         
-        for i, (texto_op, _) in enumerate(opcoes[:8]):  # max 8 opcoes visiveis
-            cor_opcao = (100, 255, 100) if i == state.escolha_selecionada else (180, 180, 180)
-            prefixo = "> " if i == state.escolha_selecionada else "  "
+        # Limita as opções visíveis para caber (scroll não implementado)
+        opcoes_visiveis = opcoes
+        offset_selecao = 0
+        if len(opcoes) > 8:
+            # Mostra 8 opções por vez, centralizadas na seleção
+            offset_selecao = max(0, state.escolha_selecionada - 4)
+            opcoes_visiveis = opcoes[offset_selecao : offset_selecao + 8]
+
+        for i, (texto_op, _) in enumerate(opcoes_visiveis):
+            indice_real = i + offset_selecao
+            
+            # Garante que a seleção não saia da lista
+            if state.escolha_selecionada >= len(opcoes):
+                 state.escolha_selecionada = 0
+            
+            cor_opcao = (100, 255, 100) if indice_real == state.escolha_selecionada else (180, 180, 180)
+            prefixo = "> " if indice_real == state.escolha_selecionada else "  "
             
             # Trunca opcao se muito longa
-            texto_completo = f"{prefixo}{i+1}. {texto_op}"
+            texto_completo = f"{prefixo}{indice_real+1}. {texto_op}"
             if FONT.size(texto_completo)[0] > max_opcao_width:
                 temp_texto_op = texto_op
-                while FONT.size(f"{prefixo}{i+1}. {temp_texto_op}...")[0] > max_opcao_width and len(temp_texto_op) > 10:
+                while FONT.size(f"{prefixo}{indice_real+1}. {temp_texto_op}...")[0] > max_opcao_width and len(temp_texto_op) > 10:
                     temp_texto_op = temp_texto_op[:-1]
-                texto_completo = f"{prefixo}{i+1}. {temp_texto_op}..."
+                texto_completo = f"{prefixo}{indice_real+1}. {temp_texto_op}..."
             
             opcao_surf = FONT.render(texto_completo, True, cor_opcao)
             screen.blit(opcao_surf, (margin_left_texto, y_opcao))
@@ -122,7 +168,9 @@ def desenhar_cena_narrativa(screen: pygame.Surface, state):
     info_y += 20
     
     max_info_width = info_width - 20
-    for simbolo in sorted(list(state.logic.conhecido))[:10]: # Limita a 10 itens
+    # Mostra os 10 fatos mais recentes
+    fatos_conhecidos = sorted(list(state.logic.conhecido))
+    for simbolo in fatos_conhecidos[:10]:
         texto = ATOMICOS_TEXTO.get(simbolo, simbolo)
         
         # Trunca texto se muito longo
@@ -137,7 +185,8 @@ def desenhar_cena_narrativa(screen: pygame.Surface, state):
         info_y += 18
     
     info_y += 10
-    screen.blit(FONT_SMALL.render(f"Premissas reveladas: {len(state.revelados)}/20", True, (255, 200, 100)), (info_x, info_y))
+    total_premissas = len(state.premissas)
+    screen.blit(FONT_SMALL.render(f"Premissas reveladas: {len(state.revelados)}/{total_premissas}", True, (255, 200, 100)), (info_x, info_y))
     info_y += 18
     screen.blit(FONT_SMALL.render(f"Descobertas: {state.descobertas}", True, (255, 200, 100)), (info_x, info_y))
     info_y += 18

@@ -14,16 +14,37 @@ SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Detetive Logico - Mansao Holloway (Halloween)")
 state = GameState() # Cria a instância ÚNICA do estado do jogo
 
-# --- Função Auxiliar de Controle ---
+# --- Função Auxiliar de Controle (ATUALIZADA) ---
 def processar_escolha(state: GameState):
     """Processa a escolha atual do jogador."""
     
     opcoes = []
-    if state.cena_atual == "escolha_acusacao":
-        opcoes = [(p["nome"], "acusar_" + p["nome"]) for p in state.personagens]
+    
+    # --- LÓGICA DO HUB DO ATO I (NOVA) ---
+    if state.cena_atual == "checar_fim_ato1":
+        locais_visitados = state.locais_visitados_ato1
+        
+        if "cozinha" not in locais_visitados:
+            opcoes.append(("Ir à Cozinha", "cozinha_ato1"))
+        if "jardim" not in locais_visitados:
+            opcoes.append(("Ir ao Jardim", "jardim_ato1"))
+        if "biblioteca" not in locais_visitados:
+            opcoes.append(("Ir à Biblioteca", "biblioteca_ato1"))
+            
+        # Se não há opções, não faz nada (o render já trata a transição)
+        if not opcoes:
+            return 
+    
+    # --- Lógica de Acusação (Existente) ---
+    elif state.cena_atual == "escolha_acusacao":
+        opcoes = [(p["nome"], "acusar_" + p["nome"]) for p in state.personagens if p["papel"] != "vitima"]
+    
+    # --- Lógica Padrão (Existente) ---
     elif CENAS[state.cena_atual].opcoes:
         opcoes = CENAS[state.cena_atual].opcoes
     
+    
+    # Processa a escolha selecionada
     if 0 <= state.escolha_selecionada < len(opcoes):
         _, proxima = opcoes[state.escolha_selecionada]
         
@@ -34,8 +55,6 @@ def processar_escolha(state: GameState):
             state.ir_para_cena(proxima)
 
 # --- Loop Principal do Jogo ---
-
-
 def game_loop():
     running = True
     
@@ -55,10 +74,17 @@ def game_loop():
                         running = False
                 else:
                     # --- Navegação ---
-                    # Calcula o número de opções válidas
+                    # Calcula o número de opções válidas (LÓGICA ATUALIZADA)
                     max_opcoes = 0
-                    if state.cena_atual == "escolha_acusacao":
-                        max_opcoes = len(state.personagens)
+                    if state.cena_atual == "checar_fim_ato1":
+                        locais_visitados = state.locais_visitados_ato1
+                        if "cozinha" not in locais_visitados: max_opcoes += 1
+                        if "jardim" not in locais_visitados: max_opcoes += 1
+                        if "biblioteca" not in locais_visitados: max_opcoes += 1
+                    
+                    elif state.cena_atual == "escolha_acusacao":
+                        max_opcoes = len([p for p in state.personagens if p["papel"] != "vitima"])
+                    
                     elif CENAS[state.cena_atual].opcoes:
                         max_opcoes = len(CENAS[state.cena_atual].opcoes)
 
@@ -69,9 +95,9 @@ def game_loop():
                             state.escolha_selecionada = (state.escolha_selecionada + 1) % max_opcoes
                         elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                             processar_escolha(state)
-                        # Teclas numéricas (1-8)
-                        elif pygame.K_1 <= event.key <= pygame.K_8:
-                            num = event.key - pygame.K_1  # 0-7
+                        # Teclas numéricas (1-9)
+                        elif pygame.K_1 <= event.key <= pygame.K_9:
+                            num = event.key - pygame.K_1  # 0-8
                             if num < max_opcoes:
                                 state.escolha_selecionada = num
                                 processar_escolha(state)

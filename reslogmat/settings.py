@@ -14,6 +14,7 @@ FONT_SMALL = pygame.font.SysFont("consolas", 16)
 FONT = pygame.font.SysFont("consolas", 19)
 FONT_MED = pygame.font.SysFont("consolas", 22)
 BIGFONT = pygame.font.SysFont("consolas", 34, bold=True)
+FONT_ITALIC = pygame.font.SysFont("consolas", 19, italic=True) # <-- ESTA LINHA ESTAVA FALTANDO
 
 # --- Clock ---
 CLOCK = pygame.time.Clock()
@@ -24,7 +25,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
 # --- Mapeamento de Personagens/Imagens ---
-# (Pode ser movido para game_data.py se preferir, mas fica bem aqui)
 PERSONAGEM_IMAGENS = {
     "Henrique": "jason.png",
     "Bruno": "freddy.png",
