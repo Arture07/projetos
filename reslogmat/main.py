@@ -18,37 +18,16 @@ state = GameState() # Cria a instância ÚNICA do estado do jogo
 def processar_escolha(state: GameState):
     """Processa a escolha atual do jogador."""
     
-    opcoes = []
-    
-    # --- LÓGICA DO HUB DO ATO I (NOVA) ---
-    if state.cena_atual == "checar_fim_ato1":
-        locais_visitados = state.locais_visitados_ato1
-        
-        if "cozinha" not in locais_visitados:
-            opcoes.append(("Ir à Cozinha", "cozinha_ato1"))
-        if "jardim" not in locais_visitados:
-            opcoes.append(("Ir ao Jardim", "jardim_ato1"))
-        if "biblioteca" not in locais_visitados:
-            opcoes.append(("Ir à Biblioteca", "biblioteca_ato1"))
-            
-        # Se não há opções, não faz nada (o render já trata a transição)
-        if not opcoes:
-            return 
-    
-    # --- Lógica de Acusação (Existente) ---
-    elif state.cena_atual == "escolha_acusacao":
-        opcoes = [(p["nome"], "acusar_" + p["nome"]) for p in state.personagens if p["papel"] != "vitima"]
-    
-    # --- Lógica Padrão (Existente) ---
-    elif CENAS[state.cena_atual].opcoes:
-        opcoes = CENAS[state.cena_atual].opcoes
-    
-    
+    # Usa a lista unificada de opções, incluindo dinâmicas e dicas
+    opcoes = state.listar_opcoes_cena()
+
     # Processa a escolha selecionada
     if 0 <= state.escolha_selecionada < len(opcoes):
         _, proxima = opcoes[state.escolha_selecionada]
-        
-        if proxima.startswith("acusar_"):
+        if proxima == "pedir_dica":
+            state.pedir_dica()
+            return
+        elif proxima.startswith("acusar_"):
             nome = proxima[7:]
             state.fazer_acusacao(nome)
         else:
@@ -73,34 +52,36 @@ def game_loop():
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
                         running = False
                 else:
+                    # --- Toggle do painel de conhecimento ---
+                    if event.key == pygame.K_TAB:
+                        state.painel_conhecimento_aberto = not state.painel_conhecimento_aberto
+                        state.conhecimento_scroll_offset = 0
+                    
                     # --- Navegação ---
-                    # Calcula o número de opções válidas (LÓGICA ATUALIZADA)
-                    max_opcoes = 0
-                    if state.cena_atual == "checar_fim_ato1":
-                        locais_visitados = state.locais_visitados_ato1
-                        if "cozinha" not in locais_visitados: max_opcoes += 1
-                        if "jardim" not in locais_visitados: max_opcoes += 1
-                        if "biblioteca" not in locais_visitados: max_opcoes += 1
-                    
-                    elif state.cena_atual == "escolha_acusacao":
-                        max_opcoes = len([p for p in state.personagens if p["papel"] != "vitima"])
-                    
-                    elif CENAS[state.cena_atual].opcoes:
-                        max_opcoes = len(CENAS[state.cena_atual].opcoes)
-
-                    if max_opcoes > 0:
+                    # Se painel está aberto, setas controlam scroll
+                    if state.painel_conhecimento_aberto:
+                        total_itens = len(state.logic.conhecido)
                         if event.key == pygame.K_UP:
-                            state.escolha_selecionada = (state.escolha_selecionada - 1) % max_opcoes
+                            state.conhecimento_scroll_offset = max(0, state.conhecimento_scroll_offset - 1)
                         elif event.key == pygame.K_DOWN:
-                            state.escolha_selecionada = (state.escolha_selecionada + 1) % max_opcoes
-                        elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                            processar_escolha(state)
-                        # Teclas numéricas (1-9)
-                        elif pygame.K_1 <= event.key <= pygame.K_9:
-                            num = event.key - pygame.K_1  # 0-8
-                            if num < max_opcoes:
-                                state.escolha_selecionada = num
+                            state.conhecimento_scroll_offset = min(total_itens - 1, state.conhecimento_scroll_offset + 1)
+                    else:
+                        # Navegação normal de opções
+                        max_opcoes = len(state.listar_opcoes_cena())
+
+                        if max_opcoes > 0:
+                            if event.key == pygame.K_UP:
+                                state.escolha_selecionada = (state.escolha_selecionada - 1) % max_opcoes
+                            elif event.key == pygame.K_DOWN:
+                                state.escolha_selecionada = (state.escolha_selecionada + 1) % max_opcoes
+                            elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                                 processar_escolha(state)
+                            # Teclas numéricas (1-9)
+                            elif pygame.K_1 <= event.key <= pygame.K_9:
+                                num = event.key - pygame.K_1  # 0-8
+                                if num < max_opcoes:
+                                    state.escolha_selecionada = num
+                                    processar_escolha(state)
 
         # --- Renderização ---
         desenhar_cena_narrativa(SCREEN, state) # Chama a função de renderização

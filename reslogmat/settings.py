@@ -39,5 +39,34 @@ PERSONAGEM_IMAGENS = {
     "Clara": "default.png",
 }
 
+# --- Imagens de Locais (o usuário pode substituir por artes reais) ---
+LOCAL_IMAGENS = {
+    "Salao principal": "local_salao.png",  # compat
+    "Salão principal": "local_salao.png",
+    "Cozinha": "local_cozinha.png",  # compat
+    "Cozinha antiga": "local_cozinha.png",
+    "Biblioteca": "local_biblioteca.jpg",
+    "Jardim": "local_jardim.jpg",  # compat
+    "Jardim dos fundos": "local_jardim.jpg",
+    "Porão": "local_porao.jpg",
+}
+
+# --- Imagens de Itens (conforme LOCAIS e pistas) ---
+ITEM_IMAGENS = {
+    "Faca de cozinha": "item_faca.jpg",
+    "Garrafa de vinho": "item_vinho.jpg",
+    "Livro (Rixa)": "item_livro_rixa.jpg",
+    "Livro (Rasgado)": "item_livro_rasgado.jpg",
+    # Novos itens
+    "Faca de brinquedo": "item_faca_brinquedo.jpg",
+    "Faca verdadeira": "item_faca_real.jpg",
+    "Tesoura": "item_tesoura.jpg",
+    "Machadinha": "item_machadinha.jpg",
+    "Lupa": "item_lupa.jpg",
+    "Pistola falsa": "item_pistola_falsa.jpg",
+    "Pistola verdadeira": "item_pistola_real.jpg",
+    "Peça de quebra-cabeça": "item_peca_quebra_cabeca.jpg",
+}
+
 # --- Conclusão Fixa ---
 CULPADO_FIXO_NOME = "Rafaela"
