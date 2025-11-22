@@ -836,6 +836,10 @@ CENAS: Dict[str, Cena] = {
 # 4. LÓGICA
 # -----------------------------
 class Logica:
+    """
+    Gerencia o sistema de inferência lógica do jogo.
+    Armazena fatos conhecidos e aplica regras para deduzir novos fatos.
+    """
     def __init__(self):
         self.conhecido: Set[str] = set()
         self.rules: List[Tuple[Tuple[str, ...], str]] = [
@@ -865,6 +869,13 @@ class Logica:
         return added
 
 class EstadoJogo:
+    """
+    Mantém todo o estado mutável do jogo:
+    - Cena atual
+    - Inventário / Variáveis de progresso
+    - Instância da lógica
+    - Pontuação e estatísticas
+    """
     def __init__(self):
         self.seed = random.randrange(10_000_000)
         random.seed(self.seed)
@@ -1007,7 +1018,7 @@ class EstadoJogo:
 
         if cid in ("interrogar_hub", "cozinha_1", "biblioteca_1"):
             if cid not in self._opcoes_cache:
-                self._opcoes_cache[cid] = self._shuffle_except_last(cid, base)
+                self._opcoes_cache[cid] = self.embaralhar_exceto_ultima(cid, base)
             opcoes = list(self._opcoes_cache[cid])
         else:
             opcoes = base
@@ -1038,6 +1049,13 @@ class EstadoJogo:
 # -----------------------------
 
 def desenhar_cena(tela: pygame.Surface, estado: EstadoJogo):
+    """
+    Renderiza a cena atual, incluindo:
+    - Título e local
+    - Texto da narrativa
+    - Opções de escolha
+    - Painel de conhecimento (se aberto)
+    """
     cena = CENAS.get(estado.cena_atual)
     if not cena:
         tela.fill((10, 0, 0))
@@ -1152,6 +1170,10 @@ def processar_escolha(estado: EstadoJogo):
     estado.ir_para_cena(dest)
 
 def executar_jogo():
+    """
+    Função principal que inicializa o Pygame, cria o estado do jogo
+    e executa o loop principal de eventos e renderização.
+    """
     pygame.display.set_caption("Detetive Lógico - Mansão Holloway")
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     estado = EstadoJogo()
