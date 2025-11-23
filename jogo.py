@@ -52,7 +52,6 @@ def quebrar_texto(texto: str, fonte: pygame.font.Font, largura_max: int) -> List
         linhas.append(linha_atual)
     return linhas
 
-# Helpers de UI reutilizáveis
 def limitar_texto(fonte: pygame.font.Font, texto: str, largura_max: int, sufixo: str = "...") -> str:
     if fonte.size(texto)[0] <= largura_max:
         return texto
@@ -886,7 +885,6 @@ class EstadoJogo:
         self.premissas: Dict[str, Tuple[Optional[str], str]] = {
             pid: (FATOS_TEXTO[pid].split(':')[0], FATOS_TEXTO[pid]) for pid in FATOS_TEXTO.keys()
         }
-        # Cache de fantasias para rótulos de fala
         self.fantasia_by_nome: Dict[str, str] = {p["nome"]: p.get("fantasia", "-") for p in self.personagens}
 
         self.cena_atual = "intro"
@@ -1124,7 +1122,7 @@ def desenhar_cena(tela: pygame.Surface, estado: EstadoJogo):
             tela.blit(FONT_SMALL.render(scroll, True, (150, 150, 150)), (px + 20, py + painel_h - 35))
         stats_y = py + painel_h - 60
         total = len(estado.premissas)
-        stat = f"Premissas: {len(estado.revelados)}/{total}  |  Descobertas: {estado.descobertas}  |  Pontos: {estado.pontos}"
+        stat = f"Premissas: {len(estado.revelados)}/{total}  |  Descobertas: {estado.descobertas}  |  Pontos: {estado.pontos}  |  Erros: {estado.erros}"
         tela.blit(FONT_SMALL.render(stat, True, (255, 200, 100)), (px + 30, stats_y))
         if estado.ultima_dica_texto:
             tela.blit(FONT_SMALL.render(f"Última dica: {estado.ultima_dica_texto}", True, (150, 220, 255)), (px + 30, stats_y + 20))
@@ -1145,11 +1143,14 @@ def desenhar_cena(tela: pygame.Surface, estado: EstadoJogo):
             tela.blit(FONT_SMALL.render(dica_texto, True, (150, 220, 255)), (info_x, info_y))
         tela.blit(FONT_SMALL.render("[TAB] Ver tudo", True, (100, 150, 200)), (info_x, info_y + 20))
 
-    inst = (
-        FONT_SMALL.render("Setas/números: navegar | ENTER: escolher | TAB: painel", True, (150, 150, 150))
-        if not estado.painel_conhecimento_aberto
-        else FONT_SMALL.render("Painel aberto - TAB fecha", True, (150, 150, 150))
-    )
+    if estado.encerrado:
+        inst = FONT_SMALL.render("ENTER: Sair | TAB: Ver Estatísticas", True, (255, 100, 100))
+    else:
+        inst = (
+            FONT_SMALL.render("Setas/números: navegar | ENTER: escolher | TAB: painel", True, (150, 150, 150))
+            if not estado.painel_conhecimento_aberto
+            else FONT_SMALL.render("Painel aberto - TAB fecha", True, (150, 150, 150))
+        )
     tela.blit(inst, (WIDTH // 2 - inst.get_width() // 2, HEIGHT - 30))
 
 # -----------------------------
@@ -1186,7 +1187,9 @@ def executar_jogo():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if estado.encerrado:
-                    if event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+                    if event.key == pygame.K_TAB:
+                        estado.painel_conhecimento_aberto = not estado.painel_conhecimento_aberto
+                    elif event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                         running = False
                     continue
 

@@ -964,7 +964,6 @@ def desenhar_cena_terminal(estado: EstadoJogo):
         print(f"  {linha}")
     print()
 
-    # Painel de conhecimento (simplificado para terminal)
     if estado.painel_conhecimento_aberto:
         print("-" * 60)
         print(" CONHECIMENTO LÓGICO (Digite 'tab' para fechar)")
@@ -985,7 +984,7 @@ def desenhar_cena_terminal(estado: EstadoJogo):
     opcoes = estado.listar_opcoes_cena()
     if estado.cena_atual == "checar_fim_ato1" and not opcoes:
         estado.ir_para_cena("discurso_inicio")
-        return # Recurse or loop will handle next frame
+        return
 
     if opcoes:
         print("OPÇÕES:")
@@ -997,10 +996,22 @@ def desenhar_cena_terminal(estado: EstadoJogo):
 def executar_jogo_terminal():
     estado = EstadoJogo()
     
-    while not estado.encerrado:
+    while True:
         desenhar_cena_terminal(estado)
         
-        # Input loop
+        if estado.encerrado:
+            print("\n" + "="*60)
+            print(" ESTATÍSTICAS FINAIS")
+            print("="*60)
+            print(f" Pontuação Final:     {estado.pontos}")
+            print(f" Premissas Reveladas: {len(estado.revelados)}/{len(estado.premissas)}")
+            print(f" Pistas Descobertas:  {estado.descobertas}")
+            print(f" Erros Cometidos:     {estado.erros}")
+            print("="*60)
+            print("\nPressione ENTER para encerrar.")
+            input()
+            break
+
         try:
             entrada = input("> ").strip().lower()
         except (EOFError, KeyboardInterrupt):
@@ -1013,20 +1024,14 @@ def executar_jogo_terminal():
         
         opcoes = estado.listar_opcoes_cena()
         if not opcoes:
-            if estado.cena_atual in ["final_vitoria", "final_derrota"]:
-                print("\nPressione ENTER para sair.")
-                input()
-                break
-            else:
-                # Fallback
-                print("Sem opções. Pressione ENTER.")
-                input()
-                continue
+            print("Pressione ENTER para continuar...")
+            input()
+            continue
 
         if entrada.isdigit():
             idx = int(entrada) - 1
             if 0 <= idx < len(opcoes):
-                estado.escolha_selecionada = idx # Mantendo compatibilidade com logica interna se precisar
+                estado.escolha_selecionada = idx 
                 _, dest = opcoes[idx]
                 
                 if dest == "pedir_dica":
@@ -1039,7 +1044,7 @@ def executar_jogo_terminal():
                 print("Opção inválida.")
                 input("Pressione ENTER...")
         else:
-            pass # Ignora input invalido e redesenha
+            pass
 
     print("Fim de jogo!")
 
