@@ -1,3 +1,5 @@
+# pip install pygame
+
 # SEÇÕES:
 # 1. CONFIG / SETTINGS
 # 2. UTILIDADES (quebra de texto)
